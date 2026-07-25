@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "倾角改变转移任务",
+  "type": "object",
+  "required": [
+    "intent",
+    "scenario_name",
+    "satellite_name",
+    "time_period",
+    "initial_orbit",
+    "targets",
+    "mcs"
+  ],
+  "properties": {
+    "intent": {
+      "const": "inclination_change_transfer"
+    },
+    "scenario_name": {
+      "type": "string"
+    },
+    "satellite_name": {
+      "type": "string"
+    },
+    "time_period": {
+      "type": "object",
+      "required": [
+        "start",
+        "end"
+      ]
+    },
+    "initial_orbit": {
+      "type": "object",
+      "required": [
+        "coordinate_type",
+        "epoch",
+        "sma",
+        "ecc",
+        "inc"
+      ]
+    },
+    "targets": {
+      "type": "object",
+      "required": [
+        "apoapsis_radius",
+        "final_eccentricity",
+        "final_inclination"
+      ]
+    },
+    "mcs": {
+      "type": "object",
+      "required": [
+        "run_after_generation",
+        "final_propagate_duration"
+      ]
+    }
+  },
+  "additionalProperties": true
+}

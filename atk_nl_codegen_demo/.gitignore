@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.idea/
+generated/*.py
+generated/*.json
+generated/*.md
+!generated/README.md

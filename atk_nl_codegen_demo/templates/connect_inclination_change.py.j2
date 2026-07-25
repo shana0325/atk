@@ -1,0 +1,74 @@
+"""由受控模板生成的 ATK Connect 倾角改变转移脚本。"""
+
+from __future__ import annotations
+
+# 真实运行前请确保 ATK 已启动，Connect 端口为 6655，并已导入 atkOpen/atkConnect/atkClose。
+
+
+def run() -> None:
+    """执行倾角改变轨道机动规划 Connect 命令序列。"""
+    conID = atkOpen("127.0.0.1", 6655)
+
+    atkConnect(conID, "New", "/ Scenario {{scenario_name}}")
+    atkConnect(conID, "New", "/ Satellite {{satellite_name}}")
+    atkConnect(conID, "SetAnalysisTimePeriod", '* "{{start_time}}" "{{end_time}}"')
+    atkConnect(conID, "Animate", "* Reset")
+    atkConnect(conID, "Graphics", "*/Satellite/{{satellite_name}} Basic LineWidth 2")
+    atkConnect(conID, "Astrogator", "*/Satellite/{{satellite_name}} SetProp")
+
+    atkConnect(conID, "Astrogator", "*/Satellite/{{satellite_name}} InsertSegment MainSequence.SegmentList.- Propagate")
+    atkConnect(conID, "Astrogator", "*/Satellite/{{satellite_name}} InsertSegment MainSequence.SegmentList.- Target_Sequence")
+    atkConnect(conID, "Astrogator", "*/Satellite/{{satellite_name}} InsertSegment MainSequence.SegmentList.Target_Sequence.SegmentList.- Maneuver")
+    atkConnect(conID, "Astrogator", "*/Satellite/{{satellite_name}} InsertSegment MainSequence.SegmentList.- Propagate")
+    atkConnect(conID, "Astrogator", "*/Satellite/{{satellite_name}} InsertSegment MainSequence.SegmentList.- Target_Sequence")
+    atkConnect(conID, "Astrogator", "*/Satellite/{{satellite_name}} InsertSegment MainSequence.SegmentList.Target_Sequence1.SegmentList.- Maneuver")
+    atkConnect(conID, "Astrogator", "*/Satellite/{{satellite_name}} InsertSegment MainSequence.SegmentList.- Propagate")
+    atkConnect(conID, "Astrogator", "*/Satellite/{{satellite_name}} InsertSegment MainSequence.SegmentList.- Target_Sequence")
+    atkConnect(conID, "Astrogator", "*/Satellite/{{satellite_name}} InsertSegment MainSequence.SegmentList.Target_Sequence2.SegmentList.- Maneuver")
+    atkConnect(conID, "Astrogator", "*/Satellite/{{satellite_name}} InsertSegment MainSequence.SegmentList.- Propagate")
+
+    atkConnect(conID, "Astrogator", "*/Satellite/{{satellite_name}} SetValue MainSequence.SegmentList.Initial_State.InitialState.Epoch {{epoch}}")
+    atkConnect(conID, "Astrogator", '*/Satellite/{{satellite_name}} SetValue MainSequence.SegmentList.Initial_State.CoordinateType "Modified Keplerian"')
+    atkConnect(conID, "Astrogator", "*/Satellite/{{satellite_name}} SetValue MainSequence.SegmentList.Initial_State.InitialState.Keplerian.sma {{sma}} m")
+    atkConnect(conID, "Astrogator", "*/Satellite/{{satellite_name}} SetValue MainSequence.SegmentList.Initial_State.InitialState.Keplerian.ecc {{ecc}}")
+    atkConnect(conID, "Astrogator", "*/Satellite/{{satellite_name}} SetValue MainSequence.SegmentList.Initial_State.InitialState.Keplerian.inc {{inc}} deg")
+    atkConnect(conID, "Astrogator", "*/Satellite/{{satellite_name}} SetValue MainSequence.SegmentList.Initial_State.InitialState.Keplerian.RAAN {{raan}}")
+    atkConnect(conID, "Astrogator", "*/Satellite/{{satellite_name}} SetValue MainSequence.SegmentList.Initial_State.InitialState.Keplerian.w {{arg_perigee}}")
+    atkConnect(conID, "Astrogator", "*/Satellite/{{satellite_name}} SetValue MainSequence.SegmentList.Initial_State.InitialState.Keplerian.ta {{true_anomaly}}")
+
+    atkConnect(conID, "Astrogator", "*/Satellite/{{satellite_name}} SetValue MainSequence.SegmentList.Propagate.StoppingConditions Duration")
+    atkConnect(conID, "Astrogator", "*/Satellite/{{satellite_name}} SetValue MainSequence.SegmentList.Propagate.StoppingConditions.Duration.TripValue 7200 sec")
+    atkConnect(conID, "Astrogator", '*/Satellite/{{satellite_name}} SetValue MainSequence.SegmentList.Target_Sequence.SegmentList.Maneuver.ImpulsiveMnvr.ThrustAxes "Satellite/{{satellite_name}} VNC(Earth)"')
+    atkConnect(conID, "Astrogator", "*/Satellite/{{satellite_name}} AddMCSSegmentControl MainSequence.SegmentList.Target_Sequence.SegmentList.Maneuver ImpulsiveMnvr.Cartesian.X")
+    atkConnect(conID, "Astrogator", "*/Satellite/{{satellite_name}} SetValue MainSequence.SegmentList.Target_Sequence.Profiles Differential_Corrector")
+    atkConnect(conID, "Astrogator", "*/Satellite/{{satellite_name}} SetMCSControlValue MainSequence.SegmentList.Target_Sequence.Profiles.Differential_Corrector Maneuver ImpulsiveMnvr.Cartesian.X Active true")
+    atkConnect(conID, "Astrogator", '*/Satellite/{{satellite_name}} SetValue MainSequence.SegmentList.Target_Sequence.SegmentList.Maneuver.Results "Radius Of Apoapsis"')
+    atkConnect(conID, "Astrogator", '*/Satellite/{{satellite_name}} SetMCSConstraintValue MainSequence.SegmentList.Target_Sequence.Profiles.Differential_Corrector Maneuver "StateCalcRadiusOfApoapsis" Active true')
+    atkConnect(conID, "Astrogator", '*/Satellite/{{satellite_name}} SetMCSConstraintValue MainSequence.SegmentList.Target_Sequence.Profiles.Differential_Corrector Maneuver "StateCalcRadiusOfApoapsis" Desired {{apoapsis_radius}} m')
+
+    atkConnect(conID, "Astrogator", "*/Satellite/{{satellite_name}} SetValue MainSequence.SegmentList.Propagate1.StoppingConditions Apoapsis")
+    atkConnect(conID, "Astrogator", "*/Satellite/{{satellite_name}} SetValue MainSequence.SegmentList.Target_Sequence1.Profiles Differential_Corrector")
+    atkConnect(conID, "Astrogator", "*/Satellite/{{satellite_name}} AddMCSSegmentControl MainSequence.SegmentList.Target_Sequence1.SegmentList.Maneuver ImpulsiveMnvr.Cartesian.X")
+    atkConnect(conID, "Astrogator", '*/Satellite/{{satellite_name}} SetValue MainSequence.SegmentList.Target_Sequence1.SegmentList.Maneuver.Results "Eccentricity"')
+    atkConnect(conID, "Astrogator", '*/Satellite/{{satellite_name}} SetMCSConstraintValue MainSequence.SegmentList.Target_Sequence1.Profiles.Differential_Corrector Maneuver "StateCalcEccentricity" Active true')
+    atkConnect(conID, "Astrogator", '*/Satellite/{{satellite_name}} SetMCSConstraintValue MainSequence.SegmentList.Target_Sequence1.Profiles.Differential_Corrector Maneuver "StateCalcEccentricity" Desired {{final_eccentricity}}')
+
+    atkConnect(conID, "Astrogator", "*/Satellite/{{satellite_name}} SetValue MainSequence.SegmentList.Propagate2.StoppingConditions AscendingNode")
+    atkConnect(conID, "Astrogator", "*/Satellite/{{satellite_name}} SetValue MainSequence.SegmentList.Propagate2.StoppingConditions.AscendingNode.RepeatCount 2")
+    atkConnect(conID, "Astrogator", "*/Satellite/{{satellite_name}} SetValue MainSequence.SegmentList.Target_Sequence2.Profiles Differential_Corrector")
+    atkConnect(conID, "Astrogator", "*/Satellite/{{satellite_name}} AddMCSSegmentControl MainSequence.SegmentList.Target_Sequence2.SegmentList.Maneuver ImpulsiveMnvr.Cartesian.X")
+    atkConnect(conID, "Astrogator", "*/Satellite/{{satellite_name}} AddMCSSegmentControl MainSequence.SegmentList.Target_Sequence2.SegmentList.Maneuver ImpulsiveMnvr.Cartesian.Y")
+    atkConnect(conID, "Astrogator", '*/Satellite/{{satellite_name}} SetValue MainSequence.SegmentList.Target_Sequence2.SegmentList.Maneuver.Results "Inclination" "Eccentricity"')
+    atkConnect(conID, "Astrogator", '*/Satellite/{{satellite_name}} SetMCSConstraintValue MainSequence.SegmentList.Target_Sequence2.Profiles.Differential_Corrector Maneuver "StateCalcInclination" Active true')
+    atkConnect(conID, "Astrogator", '*/Satellite/{{satellite_name}} SetMCSConstraintValue MainSequence.SegmentList.Target_Sequence2.Profiles.Differential_Corrector Maneuver "StateCalcInclination" Desired {{final_inclination}} deg')
+    atkConnect(conID, "Astrogator", '*/Satellite/{{satellite_name}} SetMCSConstraintValue MainSequence.SegmentList.Target_Sequence2.Profiles.Differential_Corrector Maneuver "StateCalcEccentricity" Active true')
+    atkConnect(conID, "Astrogator", '*/Satellite/{{satellite_name}} SetMCSConstraintValue MainSequence.SegmentList.Target_Sequence2.Profiles.Differential_Corrector Maneuver "StateCalcEccentricity" Desired {{final_eccentricity}}')
+
+    atkConnect(conID, "Astrogator", "*/Satellite/{{satellite_name}} SetValue MainSequence.SegmentList.Propagate3.StoppingConditions Duration")
+    atkConnect(conID, "Astrogator", "*/Satellite/{{satellite_name}} SetValue MainSequence.SegmentList.Propagate3.StoppingConditions.Duration.TripValue {{final_duration}} sec")
+    atkConnect(conID, "Astrogator", "*/Satellite/{{satellite_name}} RunMCS")
+    atkClose(conID)
+
+
+if __name__ == "__main__":
+    run()
