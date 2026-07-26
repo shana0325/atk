@@ -1,11 +1,11 @@
 # 项目结构说明
 
-本文档用于说明 `atk_nl_codegen_demo` 项目的目录结构、核心文件职责，以及当前 Demo 的运行流程。
+本文档用于说明 ATK 自然语言代码生成 Demo 的目录结构、核心文件职责，以及当前 Demo 的运行流程。
 
 ## 目录总览
 
 ```text
-atk_nl_codegen_demo/
+atk/
 ├─ app.py
 ├─ web_app.py
 ├─ README.md

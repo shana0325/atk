@@ -191,7 +191,7 @@ generated/_ATKConnectModule.pyd
 ### 3. 运行生成脚本
 
 ```powershell
-cd "D:\Shana Program\文档\Chat\atk_nl_codegen_demo\generated"
+cd "D:\Shana Program\文档\Chat\generated"
 python generated_connect_inclination_change.py
 ```
 
