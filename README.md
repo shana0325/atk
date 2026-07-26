@@ -72,42 +72,7 @@ inclination_change_transfer
 外部 Python → ATK Connect 端口 → ATK 场景/卫星/机动规划效果
 ```
 
-## 运行方式一：生成 Demo 文件
-
-在项目目录执行：
-
-```powershell
-python app.py --example
-```
-
-或者使用自然语言输入：
-
-```powershell
-python app.py "创建一个倾角改变轨道机动规划场景，从2022年11月5日开始，初始轨道半长轴6570000米，偏心率0，倾角28度，先抬升远地点到42160000米，最后把倾角降到0度，并运行MCS"
-```
-
-也可以指定任务类型输入多卫星绕行任务：
-
-```powershell
-python app.py --task-type satellite_orbit_visualization "创建两颗卫星绕地球，高度分别为500km和800km，倾角分别为45度和60度"
-```
-
-运行后会生成：
-
-```text
-generated/structured_task.json
-generated/execution_plan.md
-generated/generated_connect_inclination_change.py
-generated/generated_connect_satellite_orbit_visualization.py
-generated/generated_connect_ground_facility_setup.py
-generated/generated_connect_satellite_facility_access.py
-generated/generated_connect_latest.py
-generated/validation_report.md
-```
-
-其中 `generated_connect_latest.py` 永远保存最近一次网页或命令行生成的代码；具体任务类型对应的文件只在选择对应任务时更新。
-
-## 运行方式二：启动 Web 演示页面
+## 启动 Web 演示页面
 
 在项目目录执行：
 
@@ -120,6 +85,18 @@ python web_app.py
 ```text
 http://127.0.0.1:8765
 ```
+
+页面中点击“解析并生成代码”后，会生成最近一次任务对应的 Connect Python 代码，并同步更新：
+
+```text
+generated/generated_connect_latest.py
+```
+
+点击“确认执行最新代码”前，需要确保：
+
+- ATK 已启动。
+- Connect 端口为 `6655`。
+- `generated/` 目录中已有 `ATKConnectModule.py` 和 `_ATKConnectModule.pyd`。
 
 ### 可选：启用 DeepSeek 时间理解
 
@@ -145,34 +122,16 @@ DEEPSEEK_MODEL=deepseek-v4-flash
 
 - 自然语言输入框。
 - 任务类型选择框。
-- 解析后的结构化任务 JSON。
+- 面向普通用户的时间确认和执行前确认。
 - DeepSeek 时间理解结果。
-- 完整可读执行计划。
-- 预留追问区域。
-- 自主验证报告。
-- 生成的 Connect Python 代码。
+- 当输入中完全没有时间信息时，页面会在时间确认区追问，用户可以补充“持续三天”“绕地球 5 圈”等时间约束并重新生成。
 - “确认执行最新代码”按钮，可直接运行 `generated/generated_connect_latest.py`。
-- Connect 执行日志筛选：全部、只看 `NACK`、只看 OK。
+- 详细信息区：结构化任务 JSON、DeepSeek 原始返回、生成的 Connect Python 代码、Connect 执行日志筛选。
 - `NACK` 命令的“查看帮助”按钮，可定位到预配置的 ATK 本地帮助页。
 
-注意：网页里的普通任务参数抽取目前仍是规则解析版；DeepSeek 最小版只负责时间字段理解。点击“确认执行最新代码”前，需要确保 ATK 已启动、Connect 端口为 `6655`，并且 `generated/` 目录中已有 `ATKConnectModule.py` 和 `_ATKConnectModule.pyd`。
+注意：当前 Demo 中，时间相关自然语言由 DeepSeek 大语言模型理解；卫星高度、倾角、地面站经纬度等其他任务参数仍由规则解析。后续可以把这些参数抽取能力按同样方式迁移到大语言模型，但仍建议保留 Schema、参数校验和固定 Connect 模板生成。
 
-## 运行方式三：直接驱动 ATK
-
-如果要在 PyCharm 或命令行里直接运行生成脚本，需要先启动 ATK。
-
-### 1. 启动 ATK
-
-默认端口是 `6655`，可以直接双击 ATK，也可以用命令行指定端口：
-
-```powershell
-cd /d D:\Shana\ATK-4.0.1
-ATK -p 6655
-```
-
-### 2. 准备 Python Connect SDK
-
-需要把 ATK Connect SDK 文件复制到 `generated/` 目录：
+## ATK Connect SDK
 
 ```text
 D:\Shana\ATK-4.0.1\IntegratingWithATK\connect\Python\ATKConnectModule.py
@@ -187,27 +146,6 @@ generated/_ATKConnectModule.pyd
 ```
 
 注意：这两个 SDK 文件属于本机 ATK 安装文件，默认不提交到 Git。
-
-### 3. 运行生成脚本
-
-```powershell
-cd "D:\Shana Program\文档\Chat\generated"
-python generated_connect_inclination_change.py
-```
-
-脚本不会在控制台打印全部命令，只会在 ATK 返回 `NACK` 或 `FALSE` 时打印警告，并继续执行后续命令。如果 ATK 正常监听端口，可以在 ATK 中看到三维模型和机动规划效果。
-
-运行结束后会额外生成：
-
-```text
-generated/connect_execution_log.json
-generated/connect_execution_log.md
-```
-
-其中：
-
-- `connect_execution_log.json` 保存全部命令的结构化日志，后续网页界面可以按 `status=ok` 或 `status=nack` 筛选。
-- `connect_execution_log.md` 优先展示 NACK 命令，再展示全部命令，方便人工检查。
 
 ## Demo 亮点
 
@@ -224,10 +162,8 @@ generated/connect_execution_log.md
 
 当前版本仍然有一些边界：
 
-- 自然语言解析目前是规则版，不是大模型解析。
-- DeepSeek 目前只覆盖时间字段，不负责完整任务参数理解。
+- 时间相关表达由 DeepSeek 大语言模型处理，例如“持续三天”“绕 5 圈”“明天开始”。
+- 其他任务参数目前仍由规则解析，例如卫星高度、倾角、地面站经纬度、任务对象数量等。
+- 后续可以把其他参数抽取也迁移为大语言模型输出结构化 JSON，但仍需要保留 Schema 约束、参数校验和固定 Connect 模板生成。
+- 当前时间追问只覆盖“完全没有识别到时间约束”的情况，用户可以在页面中补充时间后重新生成。
 - 当前适合演示基础对象创建、轨道显示和简单可见性分析，复杂任务仍需继续扩展能力库。
-- 静态验证只能证明代码结构完整，真实仿真效果仍需 ATK 运行验证。
-- 多数 Connect 设置命令本身没有详细返回内容；当前脚本可以识别并记录 `NACK` 这类失败信号，但不能保证 ATK 给出具体错误原因。
-- Web 页面已经具备演示框架，但追问输入目前只是预留入口，尚未实现多轮对话状态机。
-- 还没有实现 Component 后端。
