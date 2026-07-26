@@ -89,7 +89,7 @@ python app.py "创建一个倾角改变轨道机动规划场景，从2022年11�
 也可以指定任务类型输入多卫星绕行任务：
 
 ```powershell
-python app.py --task-type satellite_orbit_visualization "创建两颗卫星绕地球转一圈，高度分别为500km和800km，倾角分别为45度和60度"
+python app.py --task-type satellite_orbit_visualization "创建两颗卫星绕地球，高度分别为500km和800km，倾角分别为45度和60度"
 ```
 
 运行后会生成：

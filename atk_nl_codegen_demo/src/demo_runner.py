@@ -106,9 +106,36 @@ def run_demo(request: str, task_type: str = "auto") -> str:
 
 
 def build_clarification_prompt(task_dict: dict[str, Any]) -> dict[str, Any]:
-    """生成预留追问信息，供后续多轮交互使用。"""
+    """生成时间追问信息，供网页做最小多轮补参演示。"""
     missing_fields = task_dict.get("missing_fields", [])
     assumptions = task_dict.get("assumptions", [])
+    time_understanding = task_dict.get("time_understanding", {})
+    if isinstance(time_understanding, dict) and time_understanding.get("status") == "ok":
+        if has_time_information(time_understanding):
+            return {
+                "enabled": False,
+                "kind": "time_identified",
+                "note": time_understanding.get("explanation") or "DeepSeek 已识别到时间信息。",
+                "questions": [],
+                "choices": [],
+                "assumptions": assumptions,
+                "missing_fields": missing_fields,
+            }
+        return {
+            "enabled": True,
+            "kind": "time_missing",
+            "note": "DeepSeek 没有从用户输入中识别到开始时间、结束时间、持续时间或圈数，需要追问时间范围。",
+            "questions": ["请补充本次仿真的时间范围或运行圈数。"],
+            "choices": [
+                {"label": "持续 1 天", "text": "持续1天"},
+                {"label": "持续 3 天", "text": "持续3天"},
+                {"label": "绕地球 1 圈", "text": "绕地球1圈"},
+            ],
+            "custom_placeholder": "例如：从明天开始持续三天 / 绕地球5圈",
+            "assumptions": assumptions,
+            "missing_fields": missing_fields + ["time_period"],
+        }
+
     questions: list[str] = []
 
     if missing_fields:
@@ -120,11 +147,32 @@ def build_clarification_prompt(task_dict: dict[str, Any]) -> dict[str, Any]:
 
     return {
         "enabled": False,
+        "kind": "reserved",
         "note": "当前版本预留追问区，尚未实现多轮对话状态机。",
+        "choices": [],
         "questions": questions,
         "assumptions": assumptions,
         "missing_fields": missing_fields,
     }
+
+
+def has_time_information(time_understanding: dict[str, Any]) -> bool:
+    """判断 DeepSeek 是否识别到了明确时间字段。"""
+    fields = time_understanding.get("time_fields", {})
+    if not isinstance(fields, dict):
+        return False
+    duration = fields.get("duration", {})
+    duration_value = duration.get("value") if isinstance(duration, dict) else None
+    return any(
+        [
+            fields.get("start_date"),
+            fields.get("start_time"),
+            fields.get("end_date"),
+            fields.get("end_time"),
+            duration_value is not None,
+            fields.get("orbit_count") is not None,
+        ]
+    )
 
 
 def get_template_path(intent: str) -> Path:

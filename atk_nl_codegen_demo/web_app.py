@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import mimetypes
+import os
 import subprocess
 import sys
 from http import HTTPStatus
@@ -12,7 +13,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 from src.demo_runner import DEFAULT_REQUEST, GENERATED_DIR, PROJECT_ROOT, TASK_TYPE_OPTIONS, run_demo_artifacts
-from src.help_links import get_help_reference
+from src.help_links import HELP_ROOT, get_help_reference
 
 
 WEB_DIR = PROJECT_ROOT / "web"
@@ -76,6 +77,19 @@ class AtkDemoWebHandler(BaseHTTPRequestHandler):
                 self.send_json({"error": str(error)}, status=HTTPStatus.BAD_REQUEST)
             except TimeoutError as error:
                 self.send_json({"error": str(error)}, status=HTTPStatus.GATEWAY_TIMEOUT)
+            except Exception as error:  # noqa: BLE001
+                self.send_json({"error": str(error)}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
+            return
+        if parsed_url.path == "/api/open-help":
+            payload = self.read_json_body()
+            command = str(payload.get("command", "")).strip()
+            cmd_string = str(payload.get("cmd_string", "")).strip()
+            try:
+                self.send_json(open_help_page(command, cmd_string))
+            except FileNotFoundError as error:
+                self.send_json({"error": str(error)}, status=HTTPStatus.NOT_FOUND)
+            except PermissionError as error:
+                self.send_json({"error": str(error)}, status=HTTPStatus.FORBIDDEN)
             except Exception as error:  # noqa: BLE001
                 self.send_json({"error": str(error)}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
             return
@@ -166,6 +180,20 @@ def execute_latest_script() -> dict[str, object]:
         "logs": logs,
         "success": result.returncode == 0,
     }
+
+
+def open_help_page(command: str, cmd_string: str) -> dict[str, object]:
+    """通过本机系统打开对应的 ATK 本地帮助页。"""
+    help_reference = get_help_reference(command, cmd_string)
+    doc_path = Path(str(help_reference["doc_path"])).resolve()
+    help_root = HELP_ROOT.resolve()
+    if help_root not in [doc_path, *doc_path.parents]:
+        raise PermissionError("帮助页路径不在 ATK 帮助目录内，已拒绝打开。")
+    if not doc_path.exists():
+        raise FileNotFoundError(f"未找到帮助页：{doc_path}")
+
+    os.startfile(str(doc_path))  # type: ignore[attr-defined]
+    return {"opened": True, "doc_path": str(doc_path)}
 
 
 def clear_previous_connect_logs() -> None:

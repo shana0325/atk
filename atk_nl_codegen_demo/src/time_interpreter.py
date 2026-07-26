@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import math
 import os
+import re
 import urllib.error
 import urllib.request
 from datetime import datetime, timedelta
@@ -49,7 +50,11 @@ def interpret_time_with_deepseek(request: str, task_type: str) -> dict[str, Any]
         with urllib.request.urlopen(http_request, timeout=30) as response:
             response_payload = json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as error:
-        return build_error_result(f"DeepSeek HTTP 错误：{error.code} {error.reason}")
+        error_body = error.read().decode("utf-8", errors="replace")
+        detail = f"DeepSeek HTTP 错误：{error.code} {error.reason}"
+        if error_body:
+            detail = f"{detail}；响应详情：{error_body}"
+        return build_error_result(detail)
     except urllib.error.URLError as error:
         return build_error_result(f"DeepSeek 网络错误：{error.reason}")
     except TimeoutError:
@@ -61,7 +66,7 @@ def interpret_time_with_deepseek(request: str, task_type: str) -> dict[str, Any]
     except (KeyError, IndexError, json.JSONDecodeError, TypeError) as error:
         return build_error_result(f"DeepSeek 返回内容不是合法 JSON：{error}")
 
-    return normalize_time_result(parsed)
+    return enrich_time_result_with_local_time_clues(normalize_time_result(parsed), request)
 
 
 def build_deepseek_payload(request: str, task_type: str) -> dict[str, Any]:
@@ -76,6 +81,8 @@ def build_deepseek_payload(request: str, task_type: str) -> dict[str, Any]:
                     "只负责把自然语言中的时间含义转换成 JSON，不要生成 ATK Connect 命令。"
                     f"当前日期是 {CURRENT_DATE}，时区是 {CURRENT_TIMEZONE}。"
                     "如果用户说今天、明天、后天，必须转换为绝对日期。"
+                    "如果用户说绕地球一圈、绕地一圈、运行两圈、飞 5 圈，应把圈数写入 orbit_count。"
+                    "圈数属于时间约束，因为后续程序会按轨道周期估算结束时间。"
                     "如果没有明确说开始时间、结束时间、持续时间或圈数，对应字段填 null。"
                     "必须只输出 JSON，不要输出解释性正文。"
                 ),
@@ -103,8 +110,80 @@ def build_deepseek_payload(request: str, task_type: str) -> dict[str, Any]:
         "response_format": {"type": "json_object"},
         "temperature": 0,
         "max_tokens": 800,
-        "thinking": {"type": "disabled"},
     }
+
+
+def enrich_time_result_with_local_time_clues(time_result: dict[str, Any], request: str) -> dict[str, Any]:
+    """用确定性规则补齐大模型可能漏掉的简单时间线索。"""
+    if time_result.get("status") != "ok":
+        return time_result
+
+    fields = time_result.get("time_fields")
+    if not isinstance(fields, dict):
+        return time_result
+
+    if fields.get("orbit_count") is not None:
+        return time_result
+
+    orbit_count = extract_orbit_count(request)
+    if orbit_count is None:
+        return time_result
+
+    fields["orbit_count"] = orbit_count
+    explanation = str(time_result.get("explanation") or "")
+    supplement = f"程序补充识别到运行圈数为 {orbit_count:g} 圈，可按轨道周期估算结束时间。"
+    time_result["explanation"] = f"{explanation}；{supplement}" if explanation else supplement
+    missing_fields = time_result.get("missing_fields")
+    if isinstance(missing_fields, list):
+        time_result["missing_fields"] = [field for field in missing_fields if field not in {"orbit_count", "time_period"}]
+    return time_result
+
+
+def extract_orbit_count(request: str) -> float | None:
+    """从“绕地球一圈/运行 5 圈”中抽取圈数。"""
+    patterns = [
+        r"(?:绕地球|绕地|运行|飞行|飞|转|跑)\s*([零〇一二两三四五六七八九十百\d.]+)\s*圈",
+        r"([零〇一二两三四五六七八九十百\d.]+)\s*圈",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, request)
+        if match:
+            return parse_chinese_number(match.group(1))
+    return None
+
+
+def parse_chinese_number(value: str) -> float | None:
+    """解析简单中文数字或阿拉伯数字。"""
+    text = value.strip()
+    try:
+        return float(text)
+    except ValueError:
+        pass
+
+    digits = {
+        "零": 0,
+        "〇": 0,
+        "一": 1,
+        "二": 2,
+        "两": 2,
+        "三": 3,
+        "四": 4,
+        "五": 5,
+        "六": 6,
+        "七": 7,
+        "八": 8,
+        "九": 9,
+    }
+    if text in digits:
+        return float(digits[text])
+    if text == "十":
+        return 10.0
+    if "十" in text:
+        left, _, right = text.partition("十")
+        tens = digits.get(left, 1) if left else 1
+        ones = digits.get(right, 0) if right else 0
+        return float(tens * 10 + ones)
+    return None
 
 
 def normalize_time_result(parsed: dict[str, Any]) -> dict[str, Any]:
@@ -281,7 +360,7 @@ def get_config_value(name: str, default: str = "") -> str:
     env_path = PROJECT_ROOT / ".env"
     if not env_path.exists():
         return default
-    for line in env_path.read_text(encoding="utf-8").splitlines():
+    for line in env_path.read_text(encoding="utf-8-sig").splitlines():
         stripped_line = line.strip()
         if not stripped_line or stripped_line.startswith("#") or "=" not in stripped_line:
             continue

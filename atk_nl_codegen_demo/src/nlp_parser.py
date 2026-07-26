@@ -49,7 +49,7 @@ TASK_TYPE_OPTIONS = [
         "id": "satellite_orbit_visualization",
         "label": "卫星轨道显示",
         "description": "创建一颗或多颗卫星，设置经典轨道，并显示约一圈轨道。",
-        "sample": "创建两颗卫星绕地球转一圈，高度分别为500km和800km，倾角分别为45度和60度。",
+        "sample": "创建两颗卫星绕地球，高度分别为500km和800km，倾角分别为45度和60度。",
     },
     {
         "id": "ground_facility_setup",

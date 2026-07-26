@@ -19,7 +19,7 @@
         <button id="load-sample" class="secondary">填入示例</button>
       </header>
 
-      <section class="card">
+      <section class="card input-card">
         <div class="section-title">
           <h2>1. 选择任务类型并输入参数</h2>
           <span>任务类型由用户选择，AI/规则只做字段抽取</span>
@@ -31,81 +31,85 @@
         <textarea id="request-input" rows="5" placeholder="例如：创建一个倾角改变轨道机动规划场景，从2022年11月5日开始..."></textarea>
         <div class="actions">
           <button id="parse-button">解析并生成代码</button>
-          <button id="execute-button" class="danger" disabled>确认执行最新代码</button>
-          <button id="refresh-logs" class="secondary">刷新执行日志</button>
         </div>
         <p id="status-line" class="status-line">等待输入。</p>
       </section>
 
-      <section class="grid">
+      <section class="grid main-grid">
         <article class="card">
           <div class="section-title">
-          <h2>2. 理解结果</h2>
-            <span>大模型/规则解析后的结构化任务 JSON</span>
-          </div>
-          <pre id="structured-task" class="code-block">暂无结果</pre>
-        </article>
-
-        <article class="card">
-          <div class="section-title">
-            <h2>3. 完整理解说明</h2>
-            <span>可读执行计划</span>
-          </div>
-          <pre id="execution-plan" class="code-block">暂无结果</pre>
-        </article>
-      </section>
-
-      <section class="grid">
-        <article class="card">
-          <div class="section-title">
-            <h2>4. DeepSeek 时间理解</h2>
-            <span>只负责时间字段抽取</span>
-          </div>
-          <pre id="time-understanding" class="code-block">暂无结果</pre>
-        </article>
-
-        <article class="card">
-          <div class="section-title">
-            <h2>5. 追问预留</h2>
-            <span>后续接多轮对话</span>
+            <h2>2. 时间确认</h2>
+            <span>面向普通用户</span>
           </div>
           <div id="clarification-box" class="clarification">暂无追问信息</div>
           <div class="follow-up">
-            <input id="follow-up-input" placeholder="预留：用户补充参数或确认默认值" disabled />
-            <button class="secondary" disabled>提交追问</button>
+            <input id="follow-up-input" placeholder="补充时间，例如：持续三天 / 绕地球5圈" disabled />
+            <button id="follow-up-submit" class="secondary" disabled>提交追问</button>
           </div>
         </article>
 
         <article class="card">
           <div class="section-title">
-            <h2>6. 自主验证报告</h2>
-            <span>代码级 Dry Run 验证</span>
+            <h2>3. 执行前确认</h2>
+            <span>给普通用户看的结果摘要</span>
           </div>
-          <pre id="validation-report" class="code-block">暂无结果</pre>
+          <div id="readiness-report" class="readiness-report">暂无结果</div>
+          <div class="readiness-actions">
+            <button id="execute-button" class="danger" disabled>确认执行最新代码</button>
+          </div>
         </article>
       </section>
 
-      <section class="card">
+      <section class="card expert-toggle-card">
         <div class="section-title">
-          <h2>7. 生成的 Connect Python 代码</h2>
-          <span>由固定模板生成，可复制到 PyCharm 或命令行运行</span>
+          <h2>详细信息</h2>
+          <span>执行日志、结构化任务、模型原始返回、生成代码</span>
         </div>
-        <p id="generated-file-path" class="status-line">尚未生成文件。</p>
-        <pre id="generated-code" class="code-block large">暂无结果</pre>
+        <button id="expert-toggle" class="secondary" type="button">展开详细信息</button>
       </section>
 
-      <section class="card">
-        <div class="section-title">
-          <h2>8. Connect 执行情况</h2>
-          <span id="log-summary">尚未加载日志</span>
-        </div>
-        <pre id="execution-output" class="console-block">尚未执行。请先生成代码，再点击“确认执行最新代码”。</pre>
-        <div class="filters">
-          <button class="filter active" data-filter="all">全部</button>
-          <button class="filter" data-filter="nack">只看 NACK</button>
-          <button class="filter" data-filter="ok">只看 OK</button>
-        </div>
-        <div id="log-table" class="log-table">暂无执行日志。请先运行 generated/generated_connect_inclination_change.py。</div>
+      <section id="expert-section" class="expert-section hidden">
+        <section class="card">
+          <div class="section-title">
+            <h2>Connect 执行情况</h2>
+            <span id="log-summary">尚未加载日志</span>
+          </div>
+          <pre id="execution-output" class="console-block">尚未执行。请先生成代码，再点击“确认执行最新代码”。</pre>
+          <div id="log-insight" class="log-insight">本次代码尚未执行，暂无排错信息。</div>
+          <div class="filters">
+            <button class="filter active" data-filter="all">全部</button>
+            <button class="filter" data-filter="nack">只看 NACK</button>
+            <button class="filter" data-filter="ok">只看 OK</button>
+          </div>
+          <div id="log-table" class="log-table">暂无执行日志。请先运行 generated/generated_connect_latest.py。</div>
+        </section>
+
+        <section class="grid">
+          <article class="card">
+            <div class="section-title">
+              <h2>理解结果</h2>
+              <span>大模型/规则解析后的结构化任务 JSON</span>
+            </div>
+            <pre id="structured-task" class="code-block">暂无结果</pre>
+          </article>
+
+          <article class="card">
+            <div class="section-title">
+              <h2>DeepSeek 时间理解</h2>
+              <span>只负责时间字段抽取</span>
+            </div>
+            <pre id="time-understanding" class="code-block">暂无结果</pre>
+          </article>
+        </section>
+
+        <section class="card">
+          <div class="section-title">
+            <h2>生成的 Connect Python 代码</h2>
+            <span>由固定模板生成，可复制到 PyCharm 或命令行运行</span>
+          </div>
+          <p id="generated-file-path" class="status-line">尚未生成文件。</p>
+          <pre id="generated-code" class="code-block large">暂无结果</pre>
+        </section>
       </section>
     </main>
 
