@@ -5,7 +5,7 @@ from __future__ import annotations
 from .models import StructuredTask
 
 
-REQUIRED_SNIPPETS = {
+INCLINATION_CHANGE_REQUIRED_SNIPPETS = {
     "建立 Connect 连接": "atkOpen",
     "创建场景": "New\", \"/ Scenario",
     "创建卫星": "New\", \"/ Satellite",
@@ -24,13 +24,51 @@ REQUIRED_SNIPPETS = {
     "关闭连接": "atkClose",
 }
 
+SINGLE_SATELLITE_REQUIRED_SNIPPETS = {
+    "建立 Connect 连接": "atkOpen",
+    "创建场景": "New\", \"/ Scenario",
+    "创建卫星": "New\", \"/ Satellite",
+    "设置分析时间": "SetAnalysisTimePeriod",
+    "设置经典轨道": "SetState",
+    "使用两体预报器": "Classical TwoBody",
+    "重置动画": "Animate",
+    "关闭连接": "atkClose",
+}
+
+SATELLITE_ORBIT_REQUIRED_SNIPPETS = {
+    "建立 Connect 连接": "atkOpen",
+    "创建场景": '"New"',
+    "创建卫星": "*/Satellite",
+    "设置经典轨道": '"SetState"',
+    "使用两体预报器": "Classical TwoBody",
+    "重置动画": '"Animate"',
+    "关闭连接": "atkClose",
+}
+
+GROUND_FACILITY_REQUIRED_SNIPPETS = {
+    "建立 Connect 连接": "atkOpen",
+    "创建场景": '"New"',
+    "创建地面站": "*/Facility",
+    "设置地面站位置": '"SetPosition"',
+    "使用地理坐标": "Geodetic",
+    "关闭连接": "atkClose",
+}
+
+SATELLITE_FACILITY_ACCESS_REQUIRED_SNIPPETS = {
+    **SATELLITE_ORBIT_REQUIRED_SNIPPETS,
+    "创建地面站": "*/Facility",
+    "设置地面站位置": '"SetPosition"',
+    "计算可见性": '"Access"',
+}
+
 
 def verify_generated_code(task: StructuredTask, code: str) -> tuple[list[str], list[str]]:
     """检查生成代码中是否包含必要命令和参数。"""
     passed: list[str] = []
     failed: list[str] = []
+    required_snippets = get_required_snippets(task.intent)
 
-    for label, snippet in REQUIRED_SNIPPETS.items():
+    for label, snippet in required_snippets.items():
         if snippet in code:
             passed.append(label)
         else:
@@ -38,11 +76,31 @@ def verify_generated_code(task: StructuredTask, code: str) -> tuple[list[str], l
 
     parameter_checks = {
         f"场景名 {task.scenario_name}": task.scenario_name,
-        f"卫星名 {task.satellite_name}": task.satellite_name,
-        f"初始半长轴 {format_number(task.initial_orbit.sma.value)}": format_number(task.initial_orbit.sma.value),
-        f"目标远地点 {format_number(task.targets.apoapsis_radius.value)}": format_number(task.targets.apoapsis_radius.value),
-        f"目标倾角 {format_number(task.targets.final_inclination.value)}": format_number(task.targets.final_inclination.value),
     }
+    if task.satellite_name:
+        parameter_checks[f"卫星名 {task.satellite_name}"] = task.satellite_name
+    if task.intent == "inclination_change_transfer":
+        parameter_checks[f"初始半长轴 {format_number(task.initial_orbit.sma.value)}"] = format_number(
+            task.initial_orbit.sma.value
+        )
+    for satellite in task.satellites:
+        parameter_checks[f"卫星名 {satellite.name}"] = satellite.name
+        parameter_checks[f"{satellite.name} 半长轴 {format_number(satellite.sma.value)}"] = format_number(
+            satellite.sma.value
+        )
+    for facility in task.facilities:
+        parameter_checks[f"地面站名 {facility.name}"] = facility.name
+    if task.targets:
+        parameter_checks.update(
+            {
+                f"目标远地点 {format_number(task.targets.apoapsis_radius.value)}": format_number(
+                    task.targets.apoapsis_radius.value
+                ),
+                f"目标倾角 {format_number(task.targets.final_inclination.value)}": format_number(
+                    task.targets.final_inclination.value
+                ),
+            }
+        )
     for label, expected_text in parameter_checks.items():
         if expected_text in code:
             passed.append(label)
@@ -50,6 +108,19 @@ def verify_generated_code(task: StructuredTask, code: str) -> tuple[list[str], l
             failed.append(label)
 
     return passed, failed
+
+
+def get_required_snippets(intent: str) -> dict[str, str]:
+    """根据任务类型返回代码验证片段。"""
+    if intent == "single_satellite_orbit":
+        return SINGLE_SATELLITE_REQUIRED_SNIPPETS
+    if intent == "satellite_orbit_visualization":
+        return SATELLITE_ORBIT_REQUIRED_SNIPPETS
+    if intent == "ground_facility_setup":
+        return GROUND_FACILITY_REQUIRED_SNIPPETS
+    if intent == "satellite_facility_access":
+        return SATELLITE_FACILITY_ACCESS_REQUIRED_SNIPPETS
+    return INCLINATION_CHANGE_REQUIRED_SNIPPETS
 
 
 def format_number(value: float) -> str:
@@ -85,6 +156,18 @@ def build_validation_report(
         lines.extend(f"- ⚠️ {assumption}" for assumption in task.assumptions)
     else:
         lines.append("- ✅ 未使用默认假设。")
+
+    lines.extend(["", "## DeepSeek 时间理解", ""])
+    time_understanding = task.time_understanding or {}
+    if time_understanding.get("status") == "ok":
+        lines.append(f"- ✅ 已启用：{time_understanding.get('explanation', '已抽取时间字段。')}")
+        lines.append(f"- 置信度：`{time_understanding.get('confidence', 0)}`")
+    elif time_understanding.get("status") == "skipped":
+        lines.append(f"- ⚠️ 已跳过：{time_understanding.get('reason')}")
+    elif time_understanding:
+        lines.append(f"- ⚠️ 时间理解失败：{time_understanding.get('reason')}")
+    else:
+        lines.append("- ⚠️ 未记录时间理解结果。")
 
     lines.extend(["", "## 参数校验", ""])
     if task_errors:

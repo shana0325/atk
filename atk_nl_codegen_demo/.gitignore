@@ -5,6 +5,8 @@ venv/
 .env
 .idea/
 generated/*.py
+generated/*.pyd
+generated/*.so
 generated/*.json
 generated/*.md
 !generated/README.md

@@ -22,6 +22,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="使用内置示例请求运行 Demo。",
     )
+    parser.add_argument(
+        "--task-type",
+        default="auto",
+        help="指定任务类型，例如 satellite_orbit_visualization、ground_facility_setup。",
+    )
     return parser
 
 
@@ -33,7 +38,7 @@ def main() -> None:
     if not request:
         raise SystemExit("请提供自然语言任务，或使用 --example。")
 
-    result = run_demo(request)
+    result = run_demo(request, task_type=arguments.task_type)
     print(result)
 
 

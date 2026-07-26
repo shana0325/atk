@@ -1,0 +1,130 @@
+"""由受控模板生成的 ATK Connect 单卫星绕地显示脚本。"""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+from ATKConnectModule import atkClose, atkConnect as raw_atkConnect, atkOpen
+
+# 真实运行前请确保 ATK 已启动，Connect 端口为 6655。
+
+CONNECT_LOGS: list[dict[str, str | int]] = []
+
+
+def atkConnect(conID: int, command: str, cmd_string: str) -> str:
+    """发送 Connect 命令，记录返回结果但不中断后续流程。"""
+    step = getattr(atkConnect, "step", 0) + 1
+    setattr(atkConnect, "step", step)
+    result = raw_atkConnect(conID, command, cmd_string)
+    result_text = "" if result is None else str(result)
+    status = classify_result(result_text)
+    CONNECT_LOGS.append(
+        {
+            "step": step,
+            "status": status,
+            "command": command,
+            "cmd_string": cmd_string,
+            "result": result_text,
+        }
+    )
+
+    if status != "ok":
+        print(f"[WARN] Connect 第 {step} 步返回 {result_text or '<empty>'}，已记录并继续执行。")
+    return result
+
+
+def classify_result(result: str) -> str:
+    """将 ATK 返回值归类为 ok 或 nack，便于后续筛选展示。"""
+    normalized_result = result.strip().upper()
+    if normalized_result.startswith("NACK") or normalized_result == "FALSE":
+        return "nack"
+    return "ok"
+
+
+def write_connect_logs() -> None:
+    """将 Connect 执行日志写入 JSON 和 Markdown 文件。"""
+    output_dir = Path(__file__).resolve().parent
+    json_path = output_dir / "connect_execution_log.json"
+    markdown_path = output_dir / "connect_execution_log.md"
+    nack_logs = [item for item in CONNECT_LOGS if item["status"] == "nack"]
+
+    json_path.write_text(
+        json.dumps(
+            {
+                "summary": {
+                    "total": len(CONNECT_LOGS),
+                    "nack": len(nack_logs),
+                    "ok": len(CONNECT_LOGS) - len(nack_logs),
+                },
+                "logs": CONNECT_LOGS,
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    lines = [
+        "# ATK Connect 执行日志",
+        "",
+        f"- 总命令数：{len(CONNECT_LOGS)}",
+        f"- NACK/失败信号：{len(nack_logs)}",
+        f"- OK/空返回：{len(CONNECT_LOGS) - len(nack_logs)}",
+        "",
+        "## NACK 命令",
+        "",
+    ]
+    if nack_logs:
+        for item in nack_logs:
+            lines.extend(
+                [
+                    f"### 第 {item['step']} 步",
+                    "",
+                    f"- 命令名：`{item['command']}`",
+                    f"- 命令参数：`{item['cmd_string']}`",
+                    f"- 返回：`{item['result'] or '<empty>'}`",
+                    "",
+                ]
+            )
+    else:
+        lines.append("未发现 NACK。")
+
+    lines.extend(["", "## 全部命令", ""])
+    for item in CONNECT_LOGS:
+        lines.append(
+            f"- [{item['status'].upper()}] 第 {item['step']} 步：`{item['command']}` | `{item['cmd_string']}` | 返回：`{item['result'] or '<empty>'}`"
+        )
+
+    markdown_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    print(f"[SUMMARY] total={len(CONNECT_LOGS)}, nack={len(nack_logs)}, ok={len(CONNECT_LOGS) - len(nack_logs)}")
+    print(f"[LOG] Connect 执行日志已写入：{json_path}")
+    print(f"[LOG] Connect 执行摘要已写入：{markdown_path}")
+
+
+def run() -> None:
+    """执行单卫星一圈轨道显示 Connect 命令序列。"""
+    print("[ATK] 正在连接 127.0.0.1:6655 ...")
+    conID = atkOpen("127.0.0.1", 6655)
+    print(f"[ATK] 连接成功，conID={conID}")
+
+    atkConnect(conID, "New", "/ Scenario {{scenario_name}}")
+    atkConnect(conID, "New", "/ Satellite {{satellite_name}}")
+    atkConnect(conID, "SetAnalysisTimePeriod", '* "{{start_time}}" "{{end_time}}"')
+    atkConnect(
+        conID,
+        "SetState",
+        '*/Satellite/{{satellite_name}} Classical TwoBody "{{start_time}}" "{{end_time}}" 60 J2000 "{{start_time}}" {{sma}} {{ecc}} {{inc}} {{arg_perigee}} {{raan}} {{true_anomaly}}',
+    )
+    atkConnect(conID, "Graphics", "*/Satellite/{{satellite_name}} Basic LineWidth 2")
+    atkConnect(conID, "Animate", "* Reset")
+
+    print("[ATK] 单卫星一圈轨道显示命令已发送。")
+    print("[ATK] 正在关闭 Connect 连接 ...")
+    atkClose(conID)
+    print("[ATK] Connect 连接已关闭。")
+    write_connect_logs()
+
+
+if __name__ == "__main__":
+    run()

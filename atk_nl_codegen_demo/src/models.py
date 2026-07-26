@@ -54,6 +54,37 @@ class McsSettings:
 
 
 @dataclass
+class SatelliteOrbitSpec:
+    """表示普通卫星轨道显示任务中的单颗卫星。"""
+
+    name: str
+    sma: Quantity
+    ecc: float
+    inc: Quantity
+    raan: Quantity
+    arg_perigee: Quantity
+    mean_anomaly: Quantity
+
+
+@dataclass
+class FacilitySpec:
+    """表示地面站创建任务中的单个地面站。"""
+
+    name: str
+    latitude: Quantity
+    longitude: Quantity
+    altitude: Quantity
+
+
+@dataclass
+class AccessPairSpec:
+    """表示需要计算可见性的两个对象。"""
+
+    from_object: str
+    to_object: str
+
+
+@dataclass
 class StructuredTask:
     """表示 AI 解析后的受约束结构化任务。"""
 
@@ -62,11 +93,15 @@ class StructuredTask:
     satellite_name: str
     time_period: TimePeriod
     initial_orbit: InitialOrbit
-    targets: TransferTargets
-    mcs: McsSettings
+    targets: TransferTargets | None
+    mcs: McsSettings | None
     source_text: str
     missing_fields: list[str] = field(default_factory=list)
     assumptions: list[str] = field(default_factory=list)
+    satellites: list[SatelliteOrbitSpec] = field(default_factory=list)
+    facilities: list[FacilitySpec] = field(default_factory=list)
+    access_pairs: list[AccessPairSpec] = field(default_factory=list)
+    time_understanding: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         """转换为可序列化字典。"""

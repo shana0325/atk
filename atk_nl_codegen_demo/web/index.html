@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ATK 自然语言二次开发 Demo</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">ATK Natural Language CodeGen Demo</p>
+          <h1>自然语言 → 结构化任务 → Connect 代码 → 执行日志</h1>
+          <p class="subtitle">
+            当前是规则解析版，预留大模型解析和多轮追问入口。重点展示可信生成、执行日志和 NACK 帮助定位。
+          </p>
+        </div>
+        <button id="load-sample" class="secondary">填入示例</button>
+      </header>
+
+      <section class="card">
+        <div class="section-title">
+          <h2>1. 选择任务类型并输入参数</h2>
+          <span>任务类型由用户选择，AI/规则只做字段抽取</span>
+        </div>
+        <label class="field-label" for="task-type-select">任务类型</label>
+        <select id="task-type-select"></select>
+        <p id="task-type-description" class="status-line">正在加载任务类型。</p>
+        <label class="field-label" for="request-input">自然语言补充参数</label>
+        <textarea id="request-input" rows="5" placeholder="例如：创建一个倾角改变轨道机动规划场景，从2022年11月5日开始..."></textarea>
+        <div class="actions">
+          <button id="parse-button">解析并生成代码</button>
+          <button id="execute-button" class="danger" disabled>确认执行最新代码</button>
+          <button id="refresh-logs" class="secondary">刷新执行日志</button>
+        </div>
+        <p id="status-line" class="status-line">等待输入。</p>
+      </section>
+
+      <section class="grid">
+        <article class="card">
+          <div class="section-title">
+          <h2>2. 理解结果</h2>
+            <span>大模型/规则解析后的结构化任务 JSON</span>
+          </div>
+          <pre id="structured-task" class="code-block">暂无结果</pre>
+        </article>
+
+        <article class="card">
+          <div class="section-title">
+            <h2>3. 完整理解说明</h2>
+            <span>可读执行计划</span>
+          </div>
+          <pre id="execution-plan" class="code-block">暂无结果</pre>
+        </article>
+      </section>
+
+      <section class="grid">
+        <article class="card">
+          <div class="section-title">
+            <h2>4. DeepSeek 时间理解</h2>
+            <span>只负责时间字段抽取</span>
+          </div>
+          <pre id="time-understanding" class="code-block">暂无结果</pre>
+        </article>
+
+        <article class="card">
+          <div class="section-title">
+            <h2>5. 追问预留</h2>
+            <span>后续接多轮对话</span>
+          </div>
+          <div id="clarification-box" class="clarification">暂无追问信息</div>
+          <div class="follow-up">
+            <input id="follow-up-input" placeholder="预留：用户补充参数或确认默认值" disabled />
+            <button class="secondary" disabled>提交追问</button>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="section-title">
+            <h2>6. 自主验证报告</h2>
+            <span>代码级 Dry Run 验证</span>
+          </div>
+          <pre id="validation-report" class="code-block">暂无结果</pre>
+        </article>
+      </section>
+
+      <section class="card">
+        <div class="section-title">
+          <h2>7. 生成的 Connect Python 代码</h2>
+          <span>由固定模板生成，可复制到 PyCharm 或命令行运行</span>
+        </div>
+        <p id="generated-file-path" class="status-line">尚未生成文件。</p>
+        <pre id="generated-code" class="code-block large">暂无结果</pre>
+      </section>
+
+      <section class="card">
+        <div class="section-title">
+          <h2>8. Connect 执行情况</h2>
+          <span id="log-summary">尚未加载日志</span>
+        </div>
+        <pre id="execution-output" class="console-block">尚未执行。请先生成代码，再点击“确认执行最新代码”。</pre>
+        <div class="filters">
+          <button class="filter active" data-filter="all">全部</button>
+          <button class="filter" data-filter="nack">只看 NACK</button>
+          <button class="filter" data-filter="ok">只看 OK</button>
+        </div>
+        <div id="log-table" class="log-table">暂无执行日志。请先运行 generated/generated_connect_inclination_change.py。</div>
+      </section>
+    </main>
+
+    <dialog id="help-dialog">
+      <div class="dialog-head">
+        <h3 id="help-title">命令帮助</h3>
+        <button id="close-help" class="icon-button">×</button>
+      </div>
+      <div id="help-body"></div>
+    </dialog>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>

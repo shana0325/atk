@@ -1010,3 +1010,45 @@ generated/validation_report.md
 3. 实现 `app.py`。
 4. 生成示例代码和验证报告。
 
+---
+
+## 19. 2026-07-26 运行验证更新
+
+当前项目已经完成外部 Python 运行验证：
+
+```text
+generated/generated_connect_inclination_change.py
+→ 导入 ATKConnectModule
+→ atkOpen 连接本机 6655 端口
+→ atkConnect 逐条发送 Connect 命令
+→ ATK 中可以直接看到对应三维模型效果
+```
+
+这说明 Demo 已经从“代码级 Dry Run 验证”升级为：
+
+```text
+外部 Python → Connect → ATK 实际执行成功
+```
+
+当前运行前提：
+
+1. ATK 已启动并监听 `6655` 端口。
+2. `generated/` 目录中存在：
+
+```text
+ATKConnectModule.py
+_ATKConnectModule.pyd
+```
+
+3. 生成脚本顶部已包含：
+
+```python
+from ATKConnectModule import atkOpen, atkConnect, atkClose
+```
+
+后续建议优先补强：
+
+1. 生成脚本记录 Connect 命令执行日志，并在 `NACK` / `FALSE` 时打印警告但不中断，运行结束后输出 `connect_execution_log.json` 和 `connect_execution_log.md`。
+2. 增加运行级验证报告，支持展示全部命令或仅筛选 `NACK` 命令。
+3. 增加查询类命令，例如 `DoesObjExist`、对象列表、报告输出检查，用于证明 ATK 内部状态确实变化。
+4. 将当前简化模板继续向 ATK 帮助文档原始倾角改变案例对齐。
